@@ -196,37 +196,39 @@ class WatermarkProcessor:
             # 应用文本效果
             if effects:
                 try:
-                    if 'shadow' in effects and effects['shadow']:
-                        # 添加阴影效果
-                        shadow_offset = effects['shadow'].get('offset', (2, 2))
-                        shadow_color = effects['shadow'].get('color', (128, 128, 128))
-                        shadow_opacity = int(opacity * effects['shadow'].get('opacity', 0.5))
+                    # 确保特效是字典类型
+                    if isinstance(effects, dict):
+                        if 'shadow' in effects and effects['shadow']:
+                            # 添加阴影效果
+                            shadow_offset = effects['shadow'].get('offset', (2, 2))
+                            shadow_color = effects['shadow'].get('color', (128, 128, 128))
+                            shadow_opacity = int(opacity * effects['shadow'].get('opacity', 0.5))
 
-                        # 绘制阴影
-                        draw.text(
-                            (shadow_offset[0], shadow_offset[1]),
-                            text,
-                            font=font,
-                            fill=shadow_color + (shadow_opacity,)
-                        )
+                            # 绘制阴影
+                            draw.text(
+                                (shadow_offset[0], shadow_offset[1]),
+                                text,
+                                font=font,
+                                fill=shadow_color + (shadow_opacity,)
+                            )
 
-                    if 'outline' in effects and effects['outline']:
-                        # 添加描边效果
-                        outline_color = effects['outline'].get('color', (255, 255, 255))
-                        outline_width = effects['outline'].get('width', 1)
-                        outline_opacity = int(opacity * effects['outline'].get('opacity', 0.5))
+                        if 'outline' in effects and effects['outline']:
+                            # 添加描边效果
+                            outline_color = effects['outline'].get('color', (255, 255, 255))
+                            outline_width = effects['outline'].get('width', 1)
+                            outline_opacity = int(opacity * effects['outline'].get('opacity', 0.5))
 
-                        # 绘制描边
-                        for dx in range(-outline_width, outline_width + 1):
-                            for dy in range(-outline_width, outline_width + 1):
-                                if dx == 0 and dy == 0:
-                                    continue
-                                draw.text(
-                                    (dx, dy),
-                                    text,
-                                    font=font,
-                                    fill=outline_color + (outline_opacity,)
-                                )
+                            # 绘制描边
+                            for dx in range(-outline_width, outline_width + 1):
+                                for dy in range(-outline_width, outline_width + 1):
+                                    if dx == 0 and dy == 0:
+                                        continue
+                                    draw.text(
+                                        (dx, dy),
+                                        text,
+                                        font=font,
+                                        fill=outline_color + (outline_opacity,)
+                                    )
                 except Exception as effects_error:
                     print(f"警告: 应用文本特效失败: {str(effects_error)}")
 

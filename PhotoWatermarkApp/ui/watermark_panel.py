@@ -39,10 +39,16 @@ class WatermarkPanel(QWidget):
         self.template_storage = TemplateStorage()
         self.init_ui()
 
+        # 确保初始参数变化信号能够触发
+        self.update_watermark_params()
+
     def init_ui(self):
         """初始化用户界面"""
         # 主布局
         layout = QVBoxLayout(self)
+
+        # 初始化完成后，确保水印参数变化信号能够触发
+        self.update_watermark_params()
 
         # 水印类型选择
         type_layout = QHBoxLayout()
@@ -364,8 +370,34 @@ class WatermarkPanel(QWidget):
 
     def on_effects_changed(self, state):
         """处理特效变更"""
+        # 确保effects字典存在
+        if 'effects' not in self.watermark_params:
+            self.watermark_params['effects'] = {
+                'shadow': False,
+                'outline': False
+            }
+
+        # 更新特效状态
         self.watermark_params['effects']['shadow'] = self.shadow_check.isChecked()
         self.watermark_params['effects']['outline'] = self.outline_check.isChecked()
+
+        # 如果启用了特效但缺少参数，添加默认参数
+        if self.watermark_params['effects']['shadow']:
+            if 'offset' not in self.watermark_params['effects']['shadow']:
+                self.watermark_params['effects']['shadow']['offset'] = (2, 2)
+            if 'color' not in self.watermark_params['effects']['shadow']:
+                self.watermark_params['effects']['shadow']['color'] = (128, 128, 128)
+            if 'opacity' not in self.watermark_params['effects']['shadow']:
+                self.watermark_params['effects']['shadow']['opacity'] = 0.5
+
+        if self.watermark_params['effects']['outline']:
+            if 'color' not in self.watermark_params['effects']['outline']:
+                self.watermark_params['effects']['outline']['color'] = (255, 255, 255)
+            if 'width' not in self.watermark_params['effects']['outline']:
+                self.watermark_params['effects']['outline']['width'] = 1
+            if 'opacity' not in self.watermark_params['effects']['outline']:
+                self.watermark_params['effects']['outline']['opacity'] = 0.5
+
         self.update_watermark_params()
 
     def on_position_changed(self, button):
@@ -393,6 +425,33 @@ class WatermarkPanel(QWidget):
     def update_watermark_params(self):
         """更新水印参数并发出信号"""
         self.watermark_params_changed.emit(self.watermark_params)
+
+        # 如果当前是文本水印，确保特效参数正确设置
+        if self.watermark_params['type'] == 'text':
+            # 确保特效参数存在
+            if 'effects' not in self.watermark_params:
+                self.watermark_params['effects'] = {
+                    'shadow': False,
+                    'outline': False
+                }
+
+            # 如果阴影特效启用但缺少参数，设置默认值
+            if self.watermark_params['effects'].get('shadow', False):
+                if 'offset' not in self.watermark_params['effects']['shadow']:
+                    self.watermark_params['effects']['shadow']['offset'] = (2, 2)
+                if 'color' not in self.watermark_params['effects']['shadow']:
+                    self.watermark_params['effects']['shadow']['color'] = (128, 128, 128)
+                if 'opacity' not in self.watermark_params['effects']['shadow']:
+                    self.watermark_params['effects']['shadow']['opacity'] = 0.5
+
+            # 如果描边特效启用但缺少参数，设置默认值
+            if self.watermark_params['effects'].get('outline', False):
+                if 'color' not in self.watermark_params['effects']['outline']:
+                    self.watermark_params['effects']['outline']['color'] = (255, 255, 255)
+                if 'width' not in self.watermark_params['effects']['outline']:
+                    self.watermark_params['effects']['outline']['width'] = 1
+                if 'opacity' not in self.watermark_params['effects']['outline']:
+                    self.watermark_params['effects']['outline']['opacity'] = 0.5
 
     def save_template(self):
         """保存水印模板"""

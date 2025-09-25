@@ -126,6 +126,15 @@ class ImageView(QWidget):
         """获取当前选中的图片"""
         return self.current_image
 
+    def get_selected_image_path(self):
+        """获取当前选中图片的路径"""
+        if self.current_image:
+            # 获取当前选中的列表项
+            selected_items = self.image_list.selectedItems()
+            if selected_items:
+                return selected_items[0].text()
+        return None
+
     def show_status_message(self, message):
         """显示状态消息"""
         # 尝试获取主窗口并显示状态消息

@@ -3,7 +3,7 @@
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen, QBrush, QCursor
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen, QBrush, QCursor, QFont, QFontMetrics
 from PyQt6.QtCore import Qt, QPoint, pyqtSignal
 
 from PIL import Image
@@ -39,6 +39,9 @@ class PreviewArea(QWidget):
         self.setMouseTracking(True)
         self.preview_label.setMouseTracking(True)
 
+        # 用于实时渲染的QPixmap
+        self.preview_pixmap = None
+
     def update_preview(self, image, watermark_params=None):
         """更新预览"""
         if image is None:
@@ -53,6 +56,9 @@ class PreviewArea(QWidget):
             # 创建预览图像副本
             preview_image = image.copy()
 
+            # 保存原始图像用于实时渲染
+            self.original_image = image.copy()
+
             # 如果有水印参数，应用水印
             if watermark_params:
                 # 应用水印
@@ -61,24 +67,58 @@ class PreviewArea(QWidget):
                     watermark_params
                 )
 
+                # 保存处理后的图像
+                self.processed_image = preview_image
+            else:
+                # 如果没有水印参数，清除处理后的图像
+                self.processed_image = None
+
             # 转换为QPixmap并显示
             qimage = ImageQt(preview_image)
-            pixmap = QPixmap.fromImage(qimage)
+            self.preview_pixmap = QPixmap.fromImage(qimage)
 
-            # 显示预览
-            self.preview_label.setPixmap(pixmap)
-            self.preview_label.setScaledContents(True)
+            # 确保预览标签有内容
+            if self.preview_pixmap.isNull():
+                print("警告: 生成的预览图像为空")
+                # 尝试直接使用原始图像
+                qimage = ImageQt(image)
+                self.preview_pixmap = QPixmap.fromImage(qimage)
+                if self.preview_pixmap.isNull():
+                    print("错误: 原始图像也无法转换为QPixmap")
+                    return
+
+            # 设置缩放模式以保持宽高比
+            self.preview_label.setPixmap(self.preview_pixmap)
+            self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.preview_label.setScaledContents(False)
+
+            # 设置最小尺寸和最大尺寸
+            self.preview_label.setMinimumSize(400, 400)
+
+            # 如果图像比预览区域大，缩放图像以适应
+            if self.preview_pixmap.width() > self.preview_label.width() or                self.preview_pixmap.height() > self.preview_label.height():
+                scaled_pixmap = self.preview_pixmap.scaled(
+                    self.preview_label.size(), 
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self.preview_label.setPixmap(scaled_pixmap)
         except Exception as e:
             print(f"预览更新失败: {str(e)}")
             # 如果水印应用失败，至少显示原始图片
             if image:
                 try:
                     qimage = ImageQt(image)
-                    pixmap = QPixmap.fromImage(qimage)
-                    self.preview_label.setPixmap(pixmap)
-                    self.preview_label.setScaledContents(True)
-                except:
-                    # 如果连原始图片都无法显示，清空预览
+                    self.preview_pixmap = QPixmap.fromImage(qimage)
+                    if not self.preview_pixmap.isNull():
+                        self.preview_label.setPixmap(self.preview_pixmap)
+                        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        self.preview_label.setScaledContents(False)
+                    else:
+                        # 如果连原始图片都无法显示，清空预览
+                        self.preview_label.clear()
+                except Exception as img_error:
+                    print(f"显示原始图片失败: {str(img_error)}")
                     self.preview_label.clear()
 
     def mousePressEvent(self, event):
@@ -97,35 +137,55 @@ class PreviewArea(QWidget):
             self.drag_start = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
+            # 重新应用最终水印
+            if self.watermark_params and hasattr(self, 'processed_image'):
+                self.update_preview(self.original_image, self.watermark_params)
+
     def mouseMoveEvent(self, event):
         """处理鼠标移动事件"""
+        # 确保当前图像存在
+        if not self.current_image:
+            return
+
         if self.dragging and self.drag_start:
             # 计算移动距离
             delta = event.pos() - self.drag_start
 
             # 更新水印位置
             if self.watermark_params:
-                # 获取图片和水印的实际尺寸
-                img_width, img_height = self.current_image.size
-                wm_width, wm_height = self.get_watermark_size()
+                try:
+                    # 获取图片和水印的实际尺寸
+                    img_width, img_height = self.current_image.size
+                    wm_width, wm_height = self.get_watermark_size()
 
-                # 计算新位置
-                current_pos = self.get_watermark_position()
-                new_x = current_pos[0] + delta.x()
-                new_y = current_pos[1] + delta.y()
+                    # 计算新位置
+                    current_pos = self.get_watermark_position()
+                    new_x = current_pos[0] + delta.x()
+                    new_y = current_pos[1] + delta.y()
 
-                # 限制在图片范围内
-                new_x = max(0, min(new_x, img_width - wm_width))
-                new_y = max(0, min(new_y, img_height - wm_height))
+                    # 限制在图片范围内
+                    new_x = max(0, min(new_x, img_width - wm_width))
+                    new_y = max(0, min(new_y, img_height - wm_height))
 
-                # 更新水印位置参数
-                self.watermark_params['position'] = (new_x, new_y)
+                    # 更新水印位置参数
+                    self.watermark_params['position'] = (new_x, new_y)
 
-                # 更新预览
-                self.update_preview(self.current_image, self.watermark_params)
+                    # 实时更新预览
+                    self.update_preview(self.current_image, self.watermark_params)
 
-                # 更新起始点
-                self.drag_start = event.pos()
+                    # 更新起始点
+                    self.drag_start = event.pos()
+                except Exception as e:
+                    print(f"鼠标移动事件处理失败: {str(e)}")
+                    self.dragging = False
+                    self.drag_start = None
+                    self.setCursor(Qt.CursorShape.ArrowCursor)
+        else:
+            # 如果没有拖动，但鼠标在水印上，改变光标形状
+            if self.watermark_params and self.is_watermark_clicked(event.pos()):
+                self.setCursor(Qt.CursorShape.OpenHandCursor)
+            else:
+                self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def is_watermark_clicked(self, pos):
         """检查点击位置是否在水印上"""
@@ -152,8 +212,15 @@ class PreviewArea(QWidget):
             # 对于文本水印，需要根据文本内容计算尺寸
             text = self.watermark_params['text']
             font_size = self.watermark_params['font_size']
-            # 这里简化处理，实际应该根据字体计算文本尺寸
-            return font_size * len(text), font_size
+
+            # 使用QFontMetrics更准确地计算文本尺寸
+            font = QFont(self.watermark_params['font'], font_size)
+            font_metrics = QFontMetrics(font)
+            # 在PyQt6中，width方法已被替换为horizontalAdvance
+            text_width = font_metrics.horizontalAdvance(text)
+            text_height = font_metrics.height()
+
+            return text_width, text_height
         else:
             # 对于图片水印，使用设置的大小
             return self.watermark_params['width'], self.watermark_params['height']

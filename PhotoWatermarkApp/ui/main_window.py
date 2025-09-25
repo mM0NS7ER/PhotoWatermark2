@@ -68,10 +68,15 @@ class MainWindow(QMainWindow):
         # 创建状态栏
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage("就绪")
+        self.status_bar.showMessage("请导入图片开始编辑")
 
         # 连接信号
         self.connect_signals()
+
+        # 初始化水印参数变化信号
+        initial_params = self.watermark_panel.get_watermark_params()
+        self.watermark_params = initial_params
+        self.watermark_panel.watermark_params_changed.emit(initial_params)
 
     def create_menu_bar(self):
         """创建菜单栏"""
@@ -177,14 +182,42 @@ class MainWindow(QMainWindow):
     def connect_signals(self):
         """连接组件信号"""
         # 图片选择信号
-        self.image_view.image_selected.connect(self.preview_area.update_preview)
+        self.image_view.image_selected.connect(self.on_image_selected)
 
         # 水印参数变化信号
-        self.watermark_panel.watermark_params_changed.connect(self.preview_area.update_preview)
+        self.watermark_panel.watermark_params_changed.connect(self.on_watermark_params_changed)
         
         # 导出参数变化信号
         self.export_panel.export_params_changed.connect(self.on_export_params_changed)
         
+    def on_image_selected(self, image):
+        """处理图片选择事件"""
+        if image:
+            # 获取当前水印参数
+            watermark_params = self.watermark_panel.get_watermark_params()
+            # 确保水印参数中的图片类型与当前面板一致
+            if watermark_params['type'] != self.watermark_panel.watermark_type:
+                watermark_params['type'] = self.watermark_panel.watermark_type
+                self.watermark_panel.watermark_params = watermark_params
+            # 更新预览
+            self.preview_area.update_preview(image, watermark_params)
+            self.status_bar.showMessage(f"已选择图片: {self.image_view.get_selected_image_path()}")
+        else:
+            self.preview_area.update_preview(None)
+            self.status_bar.showMessage("请选择一张图片")
+
+    def on_watermark_params_changed(self, params):
+        """处理水印参数变化"""
+        # 获取当前选中的图片
+        current_image = self.image_view.get_selected_image()
+        if current_image:
+            # 更新预览
+            self.preview_area.update_preview(current_image, params)
+            self.status_bar.showMessage("水印参数已更新")
+        else:
+            # 如果没有选择图片，仍然更新水印参数，但不更新预览
+            self.status_bar.showMessage("水印参数已更新，请先选择一张图片查看效果")
+
     def on_export_params_changed(self, params):
         """处理导出参数变化"""
         # 可以在这里根据导出参数的变化更新UI或其他功能
@@ -270,6 +303,11 @@ class MainWindow(QMainWindow):
 
         # 获取水印参数
         watermark_params = self.watermark_panel.get_watermark_params()
+
+        # 确保水印参数中的图片类型与当前面板一致
+        if watermark_params['type'] != 'text':
+            watermark_params['type'] = 'text'
+            self.watermark_panel.watermark_params = watermark_params
 
         # 更新预览区域
         self.preview_area.update_preview(current_image, watermark_params)
