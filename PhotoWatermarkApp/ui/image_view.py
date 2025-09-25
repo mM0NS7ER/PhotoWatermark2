@@ -3,7 +3,7 @@
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel, 
+    QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QLabel,
     QPushButton, QScrollArea, QFileDialog, QMessageBox
 )
 from PyQt6.QtGui import QPixmap, QIcon
@@ -92,7 +92,7 @@ class ImageView(QWidget):
     def clear_list(self):
         """清空图片列表"""
         reply = QMessageBox.question(
-            self, "确认清空", 
+            self, "确认清空",
             "确定要清空当前图片列表吗？",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
@@ -120,10 +120,11 @@ class ImageView(QWidget):
 
     def show_status_message(self, message):
         """显示状态消息"""
-        if self.parent():
-            parent_window = self.parent()
-            while parent_window.parent():
-                parent_window = parent_window.parent()
+        # 尝试获取主窗口并显示状态消息
+        main_window = self
+        while main_window.parent():
+            main_window = main_window.parent()
 
-            if hasattr(parent_window, 'status_bar'):
-                parent_window.status_bar.showMessage(message)
+        # 尝试查找状态栏
+        if hasattr(main_window, 'status_bar'):
+            main_window.status_bar.showMessage(message)

@@ -179,9 +179,8 @@ class MainWindow(QMainWindow):
 
     def import_images(self):
         """导入图片"""
-        # 实现图片导入逻辑
-        self.status_bar.showMessage("导入图片功能待实现")
-        QMessageBox.information(self, "提示", "图片导入功能待实现")
+        # 调用image_view的导入功能
+        self.image_view.import_images()
 
     def export_images(self):
         """导出图片"""
