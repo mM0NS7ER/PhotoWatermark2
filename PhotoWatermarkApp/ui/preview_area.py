@@ -96,9 +96,9 @@ class PreviewArea(QWidget):
             self.preview_label.setMinimumSize(400, 400)
 
             # 如果图像比预览区域大，缩放图像以适应
-            if self.preview_pixmap.width() > self.preview_label.width() or                self.preview_pixmap.height() > self.preview_label.height():
+            if self.preview_pixmap.width() > self.preview_label.width() or self.preview_pixmap.height() > self.preview_label.height():
                 scaled_pixmap = self.preview_pixmap.scaled(
-                    self.preview_label.size(), 
+                    self.preview_label.size(),
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
@@ -129,6 +129,28 @@ class PreviewArea(QWidget):
                 self.dragging = True
                 self.drag_start = event.pos()
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
+
+                # 如果当前是预设位置，转换为自定义坐标
+                if self.watermark_params and isinstance(self.watermark_params['position'], str):
+                    img_width, img_height = self.current_image.size
+                    wm_width, wm_height = self.get_watermark_size()
+
+                    position = self.watermark_params['position']
+                    if position == 'top-left':
+                        pos_x, pos_y = 10, 10
+                    elif position == 'top-right':
+                        pos_x, pos_y = img_width - wm_width - 10, 10
+                    elif position == 'bottom-left':
+                        pos_x, pos_y = 10, img_height - wm_height - 10
+                    elif position == 'bottom-right':
+                        pos_x, pos_y = img_width - wm_width - 10, img_height - wm_height - 10
+                    elif position == 'center':
+                        pos_x, pos_y = (img_width - wm_width) // 2, (img_height - wm_height) // 2
+                    else:
+                        pos_x, pos_y = 10, 10
+
+                    # 更新为自定义位置
+                    self.watermark_params['position'] = (pos_x, pos_y)
 
     def mouseReleaseEvent(self, event):
         """处理鼠标释放事件"""
@@ -199,9 +221,13 @@ class PreviewArea(QWidget):
         # 获取水印位置
         pos_x, pos_y = self.get_watermark_position()
 
+        # 获取缩放后的实际位置
+        scaled_pos = self.get_scaled_position(pos)
+        scaled_pos_x, scaled_pos_y = scaled_pos
+
         # 检查点击位置是否在水印范围内
-        return (pos_x <= pos.x() <= pos_x + wm_width and
-                pos_y <= pos.y() <= pos_y + wm_height)
+        return (pos_x <= scaled_pos_x <= pos_x + wm_width and
+                pos_y <= scaled_pos_y <= pos_y + wm_height)
 
     def get_watermark_size(self):
         """获取水印尺寸"""
@@ -227,7 +253,7 @@ class PreviewArea(QWidget):
 
     def get_watermark_position(self):
         """获取水印位置"""
-        if not self.watermark_params:
+        if not self.watermark_params or not self.current_image:
             return (0, 0)
 
         position = self.watermark_params['position']
@@ -251,3 +277,48 @@ class PreviewArea(QWidget):
         else:
             # 如果是自定义位置，直接返回
             return position
+
+    def get_scaled_position(self, pos):
+        """获取在预览图上缩放后的实际位置"""
+        if not self.preview_pixmap or not self.current_image:
+            return pos
+
+        # 计算缩放比例
+        preview_width = self.preview_pixmap.width()
+        preview_height = self.preview_pixmap.height()
+
+        img_width, img_height = self.current_image.size
+
+        # 计算实际显示尺寸（保持宽高比）
+        display_width = self.preview_label.width()
+        display_height = self.preview_label.height()
+
+        if display_width == 0 or display_height == 0:
+            return pos
+
+        # 计算实际显示的图片尺寸
+        if preview_width / preview_height > display_width / display_height:
+            # 以宽度为准
+            scale = display_width / preview_width
+            actual_display_height = int(preview_height * scale)
+            y_offset = (display_height - actual_display_height) // 2
+            x_offset = 0
+        else:
+            # 以高度为准
+            scale = display_height / preview_height
+            actual_display_width = int(preview_width * scale)
+            x_offset = (display_width - actual_display_width) // 2
+            y_offset = 0
+
+        # 转换鼠标坐标到实际图片坐标
+        if x_offset > 0:
+            scaled_x = int((pos.x() - x_offset) / scale)
+        else:
+            scaled_x = int(pos.x() / scale)
+
+        if y_offset > 0:
+            scaled_y = int((pos.y() - y_offset) / scale)
+        else:
+            scaled_y = int(pos.y() / scale)
+
+        return (scaled_x, scaled_y)
