@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         """初始化用户界面"""
         # 设置窗口属性
         self.setWindowTitle("照片水印应用")
-        self.setMinimumSize(1024, 768)
+        self.setMinimumSize(1024, 900)
 
         # 创建菜单栏
         self.create_menu_bar()

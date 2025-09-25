@@ -104,7 +104,6 @@ class WatermarkPanel(QWidget):
         self.color_button.clicked.connect(self.on_color_changed)
         color_layout.addWidget(color_label)
         color_layout.addWidget(self.color_button)
-
         text_group_layout.addLayout(color_layout)
 
         # 透明度设置
@@ -114,15 +113,15 @@ class WatermarkPanel(QWidget):
         self.opacity_slider.setRange(0, 100)
         self.opacity_slider.setValue(int(self.watermark_params['opacity'] * 100))
         self.opacity_slider.valueChanged.connect(self.on_opacity_changed)
-
+        
         self.opacity_value = QLabel(f"{int(self.watermark_params['opacity'] * 100)}%")
-
+        
         opacity_layout.addWidget(opacity_label)
         opacity_layout.addWidget(self.opacity_slider)
         opacity_layout.addWidget(self.opacity_value)
-
         text_group_layout.addLayout(opacity_layout)
 
+        # 设置组的布局并添加到文本布局
         text_group.setLayout(text_group_layout)
         text_layout.addWidget(text_group)
 
@@ -130,14 +129,21 @@ class WatermarkPanel(QWidget):
         effects_group = QGroupBox("特效设置")
         effects_layout = QVBoxLayout()
 
+        # 创建水平布局来放置特效选项
+        effects_check_layout = QHBoxLayout()
+        
         self.shadow_check = QCheckBox("阴影")
         self.shadow_check.stateChanged.connect(self.on_effects_changed)
-
+        
         self.outline_check = QCheckBox("描边")
         self.outline_check.stateChanged.connect(self.on_effects_changed)
+        
+        # 将特效选项添加到水平布局
+        effects_check_layout.addWidget(self.shadow_check)
+        effects_check_layout.addWidget(self.outline_check)
 
-        effects_layout.addWidget(self.shadow_check)
-        effects_layout.addWidget(self.outline_check)
+        # 将水平布局添加到主布局
+        effects_layout.addLayout(effects_check_layout)
 
         effects_group.setLayout(effects_layout)
         text_layout.addWidget(effects_group)
@@ -148,20 +154,45 @@ class WatermarkPanel(QWidget):
 
         position_options = [
             ("左上角", "top-left"),
-            ("右上角", "top-right"),
-            ("左下角", "bottom-left"),
-            ("右下角", "bottom-right"),
-            ("居中", "center")
+            ("右上角", "top-right")
         ]
-
+        
         self.position_group = QButtonGroup()
         self.position_buttons = []
-
+        
+        # 第一行：两个选项
+        row1_layout = QHBoxLayout()
         for text, value in position_options:
             radio = QRadioButton(text)
             self.position_group.addButton(radio)
             self.position_buttons.append((radio, value))
-            position_layout.addWidget(radio)
+            row1_layout.addWidget(radio)
+        position_layout.addLayout(row1_layout)
+        
+        # 第二行：两个选项
+        position_options = [
+            ("左下角", "bottom-left"),
+            ("右下角", "bottom-right")
+        ]
+        row2_layout = QHBoxLayout()
+        for text, value in position_options:
+            radio = QRadioButton(text)
+            self.position_group.addButton(radio)
+            self.position_buttons.append((radio, value))
+            row2_layout.addWidget(radio)
+        position_layout.addLayout(row2_layout)
+        
+        # 第三行：一个选项（居中）
+        position_options = [
+            ("居中", "center")
+        ]
+        row3_layout = QHBoxLayout()
+        for text, value in position_options:
+            radio = QRadioButton(text)
+            self.position_group.addButton(radio)
+            self.position_buttons.append((radio, value))
+            row3_layout.addWidget(radio)
+        position_layout.addLayout(row3_layout)
 
         # 设置默认选中
         for radio, value in self.position_buttons:
@@ -213,11 +244,52 @@ class WatermarkPanel(QWidget):
         image_size_layout.addWidget(self.image_height_spin)
         image_layout.addLayout(image_size_layout)
 
-        # 透明度设置（复用文本水印的透明度设置）
-        image_layout.addLayout(opacity_layout)
+        # 透明度设置（创建新的透明度布局）
+        image_opacity_layout = QHBoxLayout()
+        image_opacity_label = QLabel("透明度:")
+        self.image_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.image_opacity_slider.setRange(0, 100)
+        self.image_opacity_slider.setValue(int(self.watermark_params['opacity'] * 100))
+        self.image_opacity_slider.valueChanged.connect(self.on_opacity_changed)
+        
+        self.image_opacity_value = QLabel(f"{int(self.watermark_params['opacity'] * 100)}%")
+        
+        image_opacity_layout.addWidget(image_opacity_label)
+        image_opacity_layout.addWidget(self.image_opacity_slider)
+        image_opacity_layout.addWidget(self.image_opacity_value)
+        image_layout.addLayout(image_opacity_layout)
 
-        # 位置设置（复用文本水印的位置设置）
-        image_layout.addWidget(position_group)
+        # 位置设置（创建新的位置设置组）
+        image_position_group = QGroupBox("位置设置")
+        image_position_layout = QVBoxLayout()
+        
+        position_options = [
+            ("左上角", "top-left"),
+            ("右上角", "top-right"),
+            ("左下角", "bottom-left"),
+            ("右下角", "bottom-right"),
+            ("居中", "center")
+        ]
+        
+        self.image_position_group = QButtonGroup()
+        self.image_position_buttons = []
+        
+        for text, value in position_options:
+            radio = QRadioButton(text)
+            self.image_position_group.addButton(radio)
+            self.image_position_buttons.append((radio, value))
+            image_position_layout.addWidget(radio)
+        
+        # 设置默认选中
+        for radio, value in self.image_position_buttons:
+            if value == self.watermark_params['position']:
+                radio.setChecked(True)
+                break
+        
+        self.image_position_group.buttonClicked.connect(self.on_position_changed)
+        
+        image_position_group.setLayout(image_position_layout)
+        image_layout.addWidget(image_position_group)
 
         # 添加图片选项卡
         tabs.addTab(image_tab, "图片水印")
@@ -278,6 +350,11 @@ class WatermarkPanel(QWidget):
         opacity = value / 100.0
         self.watermark_params['opacity'] = opacity
         self.opacity_value.setText(f"{value}%")
+        
+        # 同时更新图片水印的透明度值显示
+        if hasattr(self, 'image_opacity_value'):
+            self.image_opacity_value.setText(f"{value}%")
+            
         self.update_watermark_params()
 
     def on_effects_changed(self, state):
@@ -373,14 +450,27 @@ class WatermarkPanel(QWidget):
 
             # 设置透明度
             opacity_value = int(self.watermark_params['opacity'] * 100)
+            # 同时更新文本水印和图片水印的透明度滑块
             self.opacity_slider.setValue(opacity_value)
             self.opacity_value.setText(f"{opacity_value}%")
+            
+            # 如果有图片水印的透明度滑块，也更新它
+            if hasattr(self, 'image_opacity_slider'):
+                self.image_opacity_slider.setValue(opacity_value)
+                self.image_opacity_value.setText(f"{opacity_value}%")
 
             # 设置位置
             for radio, value in self.position_buttons:
                 if value == self.watermark_params['position']:
                     radio.setChecked(True)
                     break
+                    
+            # 同时更新图片水印的位置选择
+            if hasattr(self, 'image_position_buttons'):
+                for radio, value in self.image_position_buttons:
+                    if value == self.watermark_params['position']:
+                        radio.setChecked(True)
+                        break
 
     def get_watermark_params(self):
         """获取当前水印参数"""
