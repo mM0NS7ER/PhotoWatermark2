@@ -20,9 +20,13 @@ class ImageView(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.image_storage = ImageStorage()
+        self.image_storage = None  # 将在主窗口中设置
         self.current_image = None
         self.init_ui()
+        
+    def set_image_storage(self, storage):
+        """设置图片存储实例"""
+        self.image_storage = storage
 
     def init_ui(self):
         """初始化用户界面"""

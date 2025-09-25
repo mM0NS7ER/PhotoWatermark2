@@ -98,8 +98,10 @@ class WatermarkProcessor:
             except:
                 font = ImageFont.load_default()
 
-            # 获取文本尺寸
-            text_width, text_height = draw.textsize(text, font=font)
+            # 获取文本尺寸 (使用新版本Pillow API)
+            text_bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
 
             # 创建实际大小的图像
             watermark = Image.new('RGBA', (text_width, text_height), (0, 0, 0, 0))

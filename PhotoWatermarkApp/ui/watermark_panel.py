@@ -382,6 +382,10 @@ class WatermarkPanel(QWidget):
                     radio.setChecked(True)
                     break
 
+    def get_watermark_params(self):
+        """获取当前水印参数"""
+        return self.watermark_params
+
     def show_status_message(self, message):
         """显示状态消息"""
         if self.parent():

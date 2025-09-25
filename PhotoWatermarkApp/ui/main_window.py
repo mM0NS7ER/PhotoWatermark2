@@ -13,6 +13,7 @@ from .image_view import ImageView
 from .preview_area import PreviewArea
 from .watermark_panel import WatermarkPanel
 from .export_panel import ExportPanel
+from data.image_storage import ImageStorage
 
 
 class MainWindow(QMainWindow):
@@ -20,6 +21,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        # 创建共享的图片存储实例
+        self.image_storage = ImageStorage()
         self.init_ui()
 
     def init_ui(self):
@@ -40,6 +43,8 @@ class MainWindow(QMainWindow):
 
         # 左侧：图片列表
         self.image_view = ImageView()
+        # 将主窗口的图片存储实例传递给图片视图
+        self.image_view.set_image_storage(self.image_storage)
         main_layout.addWidget(self.image_view, 1)
 
         # 中间：预览区域
@@ -176,6 +181,14 @@ class MainWindow(QMainWindow):
 
         # 水印参数变化信号
         self.watermark_panel.watermark_params_changed.connect(self.preview_area.update_preview)
+        
+        # 导出参数变化信号
+        self.export_panel.export_params_changed.connect(self.on_export_params_changed)
+        
+    def on_export_params_changed(self, params):
+        """处理导出参数变化"""
+        # 可以在这里根据导出参数的变化更新UI或其他功能
+        pass
 
     def import_images(self):
         """导入图片"""
@@ -184,9 +197,55 @@ class MainWindow(QMainWindow):
 
     def export_images(self):
         """导出图片"""
-        # 实现图片导出逻辑
-        self.status_bar.showMessage("导出图片功能待实现")
-        QMessageBox.information(self, "提示", "图片导出功能待实现")
+        # 获取导出参数
+        export_params = self.export_panel.export_params
+        
+        # 检查是否已选择输出文件夹
+        if not export_params["output_folder"]:
+            QMessageBox.warning(self, "警告", "请先选择输出文件夹")
+            return
+            
+        # 检查是否有图片可导出
+        if not self.image_storage.get_all_image_paths():
+            QMessageBox.warning(self, "警告", "没有可导出的图片")
+            return
+            
+        # 获取水印参数
+        watermark_params = self.watermark_panel.get_watermark_params() if hasattr(self.watermark_panel, "get_watermark_params") else None
+        
+        # 准备导出参数
+        export_kwargs = {
+            "output_folder": export_params["output_folder"],
+            "watermark_params": watermark_params,
+            "file_format": export_params["file_format"],
+            "quality": export_params["quality"],
+            "filename_pattern": export_params["filename_pattern"],
+            "overwrite_existing": export_params["overwrite_existing"]
+        }
+        
+        # 如果设置了调整尺寸，添加到导出参数
+        if export_params["resize_width"] > 0 and export_params["resize_height"] > 0:
+            export_kwargs["resize_size"] = (export_params["resize_width"], export_params["resize_height"])
+            
+        # 执行导出
+        self.status_bar.showMessage("正在导出图片...")
+        from core.file_processor import FileProcessor
+        file_processor = FileProcessor()
+        # 使用主窗口的图片存储实例
+        file_processor.image_storage = self.image_storage
+        results = file_processor.export_images(**export_kwargs)
+        
+        # 统计结果
+        success_count = sum(1 for success in results.values() if success)
+        total_count = len(results)
+        
+        # 显示结果
+        if success_count == total_count:
+            self.status_bar.showMessage(f"成功导出 {success_count} 张图片")
+            QMessageBox.information(self, "成功", f"成功导出 {success_count} 张图片")
+        else:
+            self.status_bar.showMessage(f"导出完成: {success_count}/{total_count} 张图片成功")
+            QMessageBox.warning(self, "部分成功", f"导出完成: {success_count}/{total_count} 张图片成功")
 
     def undo_action(self):
         """撤销操作"""

@@ -5,7 +5,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
     QPushButton, QSpinBox, QDoubleSpinBox, QLineEdit,
-    QGroupBox, QCheckBox, QFileDialog
+    QGroupBox, QCheckBox, QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
@@ -237,8 +237,20 @@ class ExportPanel(QWidget):
         # 简化处理，只显示提示信息
         if not self.export_params['output_folder']:
             # 这里应该显示错误提示
+            QMessageBox.warning(self, "警告", "请先选择输出文件夹")
             return
 
-        # 实际应用中，这里会调用文件处理模块执行导出操作
-        print(f"导出参数: {self.export_params}")
-        print("导出图片功能待实现")
+        # 触发主窗口的导出功能
+        # 通过查找主窗口对象来调用export_images方法
+        main_window = None
+        parent = self.parent()
+        while parent is not None:
+            if hasattr(parent, "export_images"):
+                main_window = parent
+                break
+            parent = parent.parent()
+            
+        if main_window:
+            main_window.export_images()
+        else:
+            QMessageBox.warning(self, "错误", "无法找到主窗口对象")
