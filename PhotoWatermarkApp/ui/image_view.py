@@ -122,6 +122,10 @@ class ImageView(QWidget):
             else:
                 QMessageBox.warning(self, "加载失败", f"无法加载图片: {file_path}")
 
+    def get_selected_image(self):
+        """获取当前选中的图片"""
+        return self.current_image
+
     def show_status_message(self, message):
         """显示状态消息"""
         # 尝试获取主窗口并显示状态消息

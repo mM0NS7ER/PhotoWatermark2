@@ -78,7 +78,12 @@ class WatermarkPanel(QWidget):
         font_label = QLabel("字体:")
         self.font_combo = QComboBox()
         self.font_combo.addItems(["Arial", "Times New Roman", "宋体", "黑体", "楷体"])
-        self.font_combo.setCurrentText(self.watermark_params['font'])
+        # 确保当前字体在列表中
+        fonts = [self.font_combo.itemText(i) for i in range(self.font_combo.count())]
+        if self.watermark_params['font'] in fonts:
+            self.font_combo.setCurrentText(self.watermark_params['font'])
+        else:
+            self.font_combo.setCurrentText("Arial")  # 默认字体
         self.font_combo.currentTextChanged.connect(self.on_font_changed)
 
         font_size_layout = QHBoxLayout()

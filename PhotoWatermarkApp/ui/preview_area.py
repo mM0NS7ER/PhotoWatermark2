@@ -45,28 +45,41 @@ class PreviewArea(QWidget):
             self.preview_label.clear()
             return
 
-        # 保存当前图像和参数
-        self.current_image = image
-        self.watermark_params = watermark_params
+        try:
+            # 保存当前图像和参数
+            self.current_image = image
+            self.watermark_params = watermark_params
 
-        # 创建预览图像副本
-        preview_image = image.copy()
+            # 创建预览图像副本
+            preview_image = image.copy()
 
-        # 如果有水印参数，应用水印
-        if watermark_params:
-            # 应用水印
-            preview_image = self.watermark_processor.apply_watermark(
-                preview_image, 
-                watermark_params
-            )
+            # 如果有水印参数，应用水印
+            if watermark_params:
+                # 应用水印
+                preview_image = self.watermark_processor.apply_watermark(
+                    preview_image,
+                    watermark_params
+                )
 
-        # 转换为QPixmap并显示
-        qimage = ImageQt(preview_image)
-        pixmap = QPixmap.fromImage(qimage)
+            # 转换为QPixmap并显示
+            qimage = ImageQt(preview_image)
+            pixmap = QPixmap.fromImage(qimage)
 
-        # 显示预览
-        self.preview_label.setPixmap(pixmap)
-        self.preview_label.setScaledContents(True)
+            # 显示预览
+            self.preview_label.setPixmap(pixmap)
+            self.preview_label.setScaledContents(True)
+        except Exception as e:
+            print(f"预览更新失败: {str(e)}")
+            # 如果水印应用失败，至少显示原始图片
+            if image:
+                try:
+                    qimage = ImageQt(image)
+                    pixmap = QPixmap.fromImage(qimage)
+                    self.preview_label.setPixmap(pixmap)
+                    self.preview_label.setScaledContents(True)
+                except:
+                    # 如果连原始图片都无法显示，清空预览
+                    self.preview_label.clear()
 
     def mousePressEvent(self, event):
         """处理鼠标按下事件"""
@@ -127,7 +140,7 @@ class PreviewArea(QWidget):
         pos_x, pos_y = self.get_watermark_position()
 
         # 检查点击位置是否在水印范围内
-        return (pos_x <= pos.x() <= pos_x + wm_width and 
+        return (pos_x <= pos.x() <= pos_x + wm_width and
                 pos_y <= pos.y() <= pos_y + wm_height)
 
     def get_watermark_size(self):

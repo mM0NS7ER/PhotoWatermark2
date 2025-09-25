@@ -259,8 +259,23 @@ class MainWindow(QMainWindow):
 
     def add_text_watermark(self):
         """添加文本水印"""
-        self.status_bar.showMessage("文本水印功能待实现")
-        QMessageBox.information(self, "提示", "文本水印功能待实现")
+        # 确保水印面板显示文本水印选项卡
+        self.watermark_panel.type_combo.setCurrentIndex(0)
+
+        # 获取当前选中的图片
+        current_image = self.image_view.get_selected_image()
+        if current_image is None:
+            QMessageBox.warning(self, "警告", "请先选择一张图片")
+            return
+
+        # 获取水印参数
+        watermark_params = self.watermark_panel.get_watermark_params()
+
+        # 更新预览区域
+        self.preview_area.update_preview(current_image, watermark_params)
+
+        self.status_bar.showMessage("已添加文本水印")
+        QMessageBox.information(self, "提示", "已添加文本水印，您可以在右侧面板调整水印设置")
 
     def add_image_watermark(self):
         """添加图片水印"""

@@ -29,7 +29,7 @@ class ConfigManager:
                 'default_type': 'text',
                 'default_text': '水印',
                 'default_font': 'Arial',
-                'default_font_size': 24,
+                'default_font_size': 100,
                 'default_color': (0, 0, 0),
                 'default_opacity': 0.7,
                 'default_position': 'center'
